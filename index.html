@@ -220,9 +220,10 @@ fetch('volcano.json')
         var d = L.DomUtil.create('div', 'legend');
         d.innerHTML =
             "<b>Wulkany (Indeks Ekspozycji Ludności)</b><br>" +
-            "<span style='color:#800026'>▲</span> bardzo wysoki<br>" +
-            "<span style='color:#bd0026'>▲</span> wysoki<br>" +
-            "<span style='color:#f03b20'>▲</span> średni";
+            "<span style='color:#800026'>▲</span> bardzo wysokie (> 15)<br>" +
+            "<span style='color:#bd0026'>▲</span> wysokie (10–15)<br>" +
+            "<span style='color:#f03b20'>▲</span> średnie (5–10)<br>" +
+            "<span style='color:#fd8d3c'>▲</span> niskie (< 5)";
         return d;
     };
 
