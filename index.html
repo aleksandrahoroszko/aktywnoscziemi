@@ -133,8 +133,8 @@
 <div id="dashboard">
     <div id="sidebar">
         <div class="sidebar-header">
-            <h2>Live</h2>
-            <p>Ostatnie 24h (USGS)</p>
+            <h2>Live Monitor</h2>
+            <p>Ostatnie 24h (Najnowsze u góry)</p>
         </div>
         <ul id="quake-list">
             <li style="padding:20px; text-align:center; color:#666;">Ładowanie danych...</li>
@@ -206,6 +206,7 @@ fetch('https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson
         var coords = f.geometry.coordinates;
         var place = f.properties.place;
         var time = new Date(f.properties.time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+        var url = f.properties.url;
 
         var finalLayer;
         if (mag > 4.5) {
@@ -220,9 +221,9 @@ fetch('https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson
         }
         
         finalLayer.bindPopup(
-        `<b>${mag} mag</b><br>${place}<br>${time}<br>
-         <a href="${f.properties.url}" target="_blank" style="color: #ff8c00">Zobacz szczegóły na USGS</a>`
-);
+            `<b>${mag} mag</b><br>${place}<br>${time}<br>
+            <a href="${url}" target="_blank" style="color: #ff8c00">Zobacz szczegóły na USGS</a>`
+        );
         earthquakesLayer.addLayer(finalLayer);
 
         var li = document.createElement('li');
@@ -242,7 +243,7 @@ fetch('https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson
             map.flyTo([coords[1], coords[0]], 8, { duration: 1.5 });
             L.popup()
                 .setLatLng([coords[1], coords[0]])
-                .setContent(`<b>${mag} mag</b><br>${place}`)
+                .setContent(`<b>${mag} mag</b><br>${place}<br>${time}<br><a href="${url}" target="_blank" style="color: #ff8c00">Zobacz szczegóły na USGS</a>`)
                 .openOn(map);
         });
 
@@ -258,7 +259,8 @@ fetch('https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson
              "<b>Magnituda</b><br>" + 
              "<span style='color:#800000'>●</span> > 6<br>" + 
              "<span style='color:#b30000'>●</span> 5–6<br>" + 
-             "<span style='color:#e34a33'>●</span> 4–5"; 
+             "<span style='color:#e34a33'>●</span> 4–5<br>" +
+             "<span style='color:#fc8d59'>●</span> < 4";
          return d; 
     };
     addLegend("Trzęsienia");
@@ -294,7 +296,8 @@ fetch('volcano.json')
              "<b>Wulkany (PEI)</b><br>" + 
              "<span style='color:#800026'>▲</span> bardzo wysokie<br>" + 
              "<span style='color:#bd0026'>▲</span> wysokie<br>" + 
-             "<span style='color:#f03b20'>▲</span> średnie"; 
+             "<span style='color:#f03b20'>▲</span> średnie<br>" +
+             "<span style='color:#fd8d3c'>▲</span> niskie";
          return d; 
     };
     
