@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<title>Aktywność Ziemi</title>
+<link rel="icon" type="image/ico" href="wulkan.ico">
+
+<link rel="stylesheet" href="leaflet.css">
+<link rel="stylesheet" href="L.Icon.Pulse.css" />
+
+<style>
+    html, body {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        padding: 0;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        background: #1a1a1a;
+        overflow: hidden;
+    }
+
+    #dashboard {
+        display: flex;
+        height: 100vh;
+    }
+
+    #sidebar {
+        width: 350px;
+        background: #222;
+        color: #ddd;
+        border-right: 1px solid #444;
+        display: flex;
+        flex-direction: column;
+        z-index: 1000;
+        box-shadow: 2px 0 10px rgba(0,0,0,0.5);
+    }
+
+    .sidebar-header {
+        padding: 20px;
+        background: #2c2c2c;
+        border-bottom: 1px solid #444;
+        text-align: center;
+    }
+    .sidebar-header h2 { margin: 0; color: #ff4500; font-size: 20px; text-transform: uppercase; letter-spacing: 1px; }
+    .sidebar-header p { margin: 5px 0 0; font-size: 12px; color: #888; }
+
+    #quake-list {
+        flex: 1;
+        overflow-y: auto;
+        padding: 0;
+        margin: 0;
+        list-style: none;
+    }
+
+    .quake-item {
+        padding: 15px;
+        border-bottom: 1px solid #333;
+        cursor: pointer;
+        transition: background 0.2s;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    .quake-item:hover {
+        background: #333;
+    }
+    
+    .mag-badge {
+        width: 35px;
+        height: 35px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        color: #fff;
+        font-size: 14px;
+        flex-shrink: 0;
+    }
+    
+    .quake-info h4 { margin: 0 0 5px; font-size: 14px; color: #eee; }
+    .quake-info span { font-size: 11px; color: #aaa; }
+
+    #map-container {
+        flex-grow: 1;
+        position: relative;
+    }
+    #map {
+        width: 100%;
+        height: 100%;
+    }
+
+    .legend {
+        background: rgba(255,255,255,0.95);
+        padding: 8px;
+        border-radius: 6px;
+        font-size: 13px;
+        line-height: 1.4;
+        margin-bottom: 6px;
+        box-shadow: 0 0 15px rgba(0,0,0,0.2);
+        color: #333;
+    }
+
+    .volcano {
+        font-size: 16px;
+        font-weight: bold;
+        text-align: center;
+    }
+    
+    .leaflet-popup-content-wrapper, .leaflet-popup-tip {
+        background: #222;
+        color: #fff;
+        border: 1px solid #ff4500;
+    }
+    .leaflet-popup-content a { color: #ff8c00; }
+
+    .leaflet-control-custom {
+        background-color: #333;
+        color: white;
+        border: 2px solid #555;
+    }
+    .leaflet-control-custom:hover { background-color: #444; }
+
+    #quake-list::-webkit-scrollbar { width: 8px; }
+    #quake-list::-webkit-scrollbar-track { background: #222; }
+    #quake-list::-webkit-scrollbar-thumb { background: #555; border-radius: 4px; }
+
+</style>
+</head>
+
+<body>
+
+<div id="dashboard">
+    <div id="sidebar">
+        <div class="sidebar-header">
+            <h2>Live Monitor</h2>
+            <p>Ostatnie 24h (USGS)</p>
+        </div>
+        <ul id="quake-list">
+            <li style="padding:20px; text-align:center; color:#666;">Ładowanie danych...</li>
+        </ul>
+    </div>
+
+    <div id="map-container">
+        <div id="map"></div>
+    </div>
+</div>
+
+<script src="leaflet.js"></script>
+<script src="L.Icon.Pulse.js"></script>
+
+<script>
+
+var map = L.map('map').setView([20, 10], 2);
+
+var satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+    attribution: 'Esri',
+    maxZoom: 18
+}).addTo(map);
+
+var osm = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: 'OSM' });
+var topo = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { attribution: 'Topo' });
+
+L.control.layers(
+    { "Satelita": satellite, "OSM": osm, "Fizyczna": topo },
+    {}, { collapsed: true }
+).addTo(map);
+
+var legends = {};
+function addLegend(name) { if (legends[name]) legends[name].addTo(map); }
+function removeLegend(name) { if (legends[name]) map.removeControl(legends[name]); }
+
+var platesLayer = L.layerGroup();
+fetch('tectonicplates.json')
+.then(r => r.json())
+.then(data => {
+    L.geoJSON(data, {
+        style: { color: '#ff4500', weight: 3 },
+        onEachFeature: function(f, l) { l.bindPopup("Płyta: " + (f.properties.Name || "Nieznana")); }
+    }).addTo(platesLayer);
+    
+    legends["Płyty"] = L.control({ position: 'bottomleft' });
+    legends["Płyty"].onAdd = function () {
+        var d = L.DomUtil.create('div', 'legend');
+        d.innerHTML = "<b>Płyty tektoniczne</b><br><span style='color:#ff4500'>━━━</span> granice";
+        return d;
+    };
+    L.control.layers(null, { "Płyty tektoniczne": platesLayer }, {collapsed: false}).addTo(map);
+    platesLayer.addTo(map);
+});
+
+var earthquakesLayer = L.layerGroup();
+var quakeList = document.getElementById('quake-list');
+
+fetch('https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson')
+.then(r => r.json())
+.then(data => {
+    
+    data.features.sort((a, b) => b.properties.mag - a.properties.mag);
+    quakeList.innerHTML = "";
+
+    data.features.forEach(f => {
+        var mag = f.properties.mag;
+        if (!mag || mag < 2.5) return;
+
+        var coords = f.geometry.coordinates;
+        var place = f.properties.place;
+        var time = new Date(f.properties.time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+
+        var finalLayer;
+        if (mag > 4.5) {
+            var icon = L.icon.pulse({
+                iconSize: [12, 12], color: 'red', fillColor: 'red', heartbeat: mag > 6 ? 0.8 : 2
+            });
+            finalLayer = L.marker([coords[1], coords[0]], { icon: icon });
+        } else {
+            finalLayer = L.circleMarker([coords[1], coords[0]], {
+                radius: mag * 2, color: '#fc8d59', fillOpacity: 0.6, weight: 1
+            });
+        }
+        
+        finalLayer.bindPopup(`<b>${mag} mag</b><br>${place}<br>${time}`);
+        earthquakesLayer.addLayer(finalLayer);
+
+        var li = document.createElement('li');
+        li.className = 'quake-item';
+        
+        var badgeColor = mag > 6 ? '#800000' : (mag > 5 ? '#b30000' : (mag > 4 ? '#e34a33' : '#fc8d59'));
+
+        li.innerHTML = `
+            <div class="mag-badge" style="background: ${badgeColor}">${mag.toFixed(1)}</div>
+            <div class="quake-info">
+                <h4>${place}</h4>
+                <span>Godzina: ${time} | Głębokość: ${coords[2]} km</span>
+            </div>
+        `;
+
+        li.addEventListener('click', function() {
+            map.flyTo([coords[1], coords[0]], 8, { duration: 1.5 });
+            L.popup()
+                .setLatLng([coords[1], coords[0]])
+                .setContent(`<b>${mag} mag</b><br>${place}`)
+                .openOn(map);
+        });
+
+        quakeList.appendChild(li);
+    });
+
+    earthquakesLayer.addTo(map);
+    
+    legends["Trzęsienia"] = L.control({ position: 'bottomleft' });
+    legends["Trzęsienia"].onAdd = function () {
+         var d = L.DomUtil.create('div', 'legend'); 
+         d.innerHTML = 
+             "<b>Magnituda</b><br>" + 
+             "<span style='color:#800000'>●</span> > 6<br>" + 
+             "<span style='color:#b30000'>●</span> 5–6<br>" + 
+             "<span style='color:#e34a33'>●</span> 4–5"; 
+         return d; 
+    };
+    addLegend("Trzęsienia");
+});
+
+var volcanoLayer = L.layerGroup();
+fetch('volcano.json')
+.then(r => r.json())
+.then(data => {
+    data.features.forEach(f => {
+        var pei = f.properties.PEI;
+        if (!pei) return;
+        var color = pei > 15 ? '#800026' : (pei > 10 ? '#bd0026' : (pei > 5 ? '#f03b20' : '#fd8d3c'));
+        
+        var m = L.marker([f.geometry.coordinates[1], f.geometry.coordinates[0]], {
+            icon: L.divIcon({
+                className: 'volcano',
+                html: `<span style='color:${color};'>▲</span>`,
+                iconSize: [16,16]
+            })
+        });
+        m.bindPopup(`<b>${f.properties.V_Name}</b><br>Kraj: ${f.properties.Country}<br>Zagrożenie (PEI): ${pei}`);
+        volcanoLayer.addLayer(m);
+    });
+    
+    map.on('overlayadd', e => { if(e.name === 'Wulkany') addLegend('Wulkany'); });
+    map.on('overlayremove', e => { if(e.name === 'Wulkany') removeLegend('Wulkany'); });
+    
+    legends["Wulkany"] = L.control({ position: 'bottomleft' });
+    legends["Wulkany"].onAdd = function() { 
+         var d = L.DomUtil.create('div', 'legend'); 
+         d.innerHTML = 
+             "<b>Wulkany (PEI)</b><br>" + 
+             "<span style='color:#800026'>▲</span> bardzo wysokie<br>" + 
+             "<span style='color:#bd0026'>▲</span> wysokie<br>" + 
+             "<span style='color:#f03b20'>▲</span> średnie"; 
+         return d; 
+    };
+    
+    volcanoLayer.addTo(map); 
+});
+
+setTimeout(() => {
+    L.control.layers(null, { 
+        "Trzęsienia (Live)": earthquakesLayer,
+        "Wulkany": volcanoLayer
+    }, { position: 'topright', collapsed: false }).addTo(map);
+}, 1000);
+
+var locateBtn = L.control({position: 'topleft'});
+locateBtn.onAdd = function() {
+    var d = L.DomUtil.create('div', 'leaflet-bar leaflet-control leaflet-control-custom');
+    d.style.width = '30px'; d.style.height = '30px'; d.style.lineHeight = '30px'; d.style.textAlign = 'center'; d.style.cursor = 'pointer';
+    d.innerHTML = "🎯";
+    d.onclick = function() { map.locate({setView: true, maxZoom: 6}); };
+    return d;
+};
+locateBtn.addTo(map);
+
+var userLine;
+map.on('locationfound', e => {
+    L.circle(e.latlng, e.accuracy/2).addTo(map);
+    L.marker(e.latlng).addTo(map).bindPopup("Jesteś tutaj").openPopup();
+    
+    var minDst = Infinity, closest = null;
+    volcanoLayer.eachLayer(l => {
+        var d = map.distance(e.latlng, l.getLatLng());
+        if(d < minDst) { minDst = d; closest = l; }
+    });
+    
+    if(closest) {
+        if(userLine) map.removeLayer(userLine);
+        userLine = L.polyline([e.latlng, closest.getLatLng()], {color:'yellow', dashArray:'5,5'}).addTo(map);
+        alert(`Najbliższy wulkan: ${closest.feature.properties.V_Name}\nDystans: ${(minDst/1000).toFixed(0)} km`);
+    }
+});
+
+</script>
+</body>
+</html>
