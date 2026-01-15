@@ -219,7 +219,7 @@ fetch('https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson
             });
         }
         
-        finalLayer.bindPopup(`<b>${mag} mag</b><br>${place}<br>${time}`);
+        finalLayer.bindPopup(`<b>${mag} mag</b><br>${place}<br>${time}<br>${url}`);
         earthquakesLayer.addLayer(finalLayer);
 
         var li = document.createElement('li');
