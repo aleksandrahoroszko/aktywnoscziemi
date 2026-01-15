@@ -196,7 +196,7 @@ fetch('https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson
 .then(r => r.json())
 .then(data => {
     
-    data.features.sort((a, b) => b.properties.mag - a.properties.mag);
+    data.features.sort((a, b) => b.properties.time - a.properties.time);
     quakeList.innerHTML = "";
 
     data.features.forEach(f => {
