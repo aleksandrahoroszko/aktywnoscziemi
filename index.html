@@ -219,7 +219,10 @@ fetch('https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson
             });
         }
         
-        finalLayer.bindPopup(`<b>${mag} mag</b><br>${place}<br>${time}<br>${url}`);
+        finalLayer.bindPopup(
+        `<b>${mag} mag</b><br>${place}<br>${time}<br>
+         <a href="${f.properties.url}" target="_blank" style="color: #ff8c00">Zobacz szczegóły na USGS</a>`
+);
         earthquakesLayer.addLayer(finalLayer);
 
         var li = document.createElement('li');
