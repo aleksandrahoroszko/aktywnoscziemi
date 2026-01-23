@@ -224,6 +224,7 @@ fetch('https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson
             `<b>${mag} mag</b><br>${place}<br>${time}<br>
             <a href="${url}" target="_blank" style="color: #ff8c00">Zobacz szczegóły na USGS</a>`
         );
+        finalLayer.feature = f;
         earthquakesLayer.addLayer(finalLayer);
 
         var li = document.createElement('li');
@@ -335,8 +336,10 @@ map.on('locationfound', e => {
     
     if(closest) {
         if(userLine) map.removeLayer(userLine);
+        
         userLine = L.polyline([e.latlng, closest.getLatLng()], {color:'yellow', dashArray:'5,5'}).addTo(map);
-        alert(`Najbliższy wulkan: ${closest.feature.properties.V_Name}\nDystans: ${(minDst/1000).toFixed(0)} km`);
+        var placeName = closest.feature ? closest.feature.properties.place : "Nieznane miejsce";
+        alert(`Najbliższe trzęsienie ziemi:\n${placeName}\nMagnituda: ${closest.feature.properties.mag}\nDystans: ${(minDst/1000).toFixed(0)} km`);
     }
 });
 
