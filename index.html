@@ -328,7 +328,7 @@ map.on('locationfound', e => {
     L.marker(e.latlng).addTo(map).bindPopup("Jesteś tutaj").openPopup();
     
     var minDst = Infinity, closest = null;
-    volcanoLayer.eachLayer(l => {
+    earthquakesLayer.eachLayer(l => {
         var d = map.distance(e.latlng, l.getLatLng());
         if(d < minDst) { minDst = d; closest = l; }
     });
